@@ -1,143 +1,109 @@
+import React, { useState } from 'react';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-import React, { useState, useCallback } from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
+// 🔴 کلید جدیدی که ساختی را دقیقاً بین دو کوتیشن پایین قرار بده
+const API_KEY = "AIzaSyDU_1U8wp_JpS8Jii7aEzV3y7MXnR1cAtQ"; 
+const genAI = new GoogleGenerativeAI(API_KEY);
 
-const StrategyTool: React.FC = () => {
-  const [idea, setIdea] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [roadmap, setRoadmap] = useState<null | any[]>(null);
-  const [showBalloons, setShowBalloons] = useState(false);
+const StrategyTool = () => {
+  const [task, setTask] = useState('');
+  const [activeStep, setActiveStep] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [generatedRoadmap, setGeneratedRoadmap] = useState<any[]>([]);
 
-  const generateRoadmap = useCallback(async () => {
-    if (!idea.trim()) return;
+  const callGeminiAPI = async (userInput: string) => {
+    // استفاده از مدل فلش برای سرعت بالاتر در دمو
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
-    setLoading(true);
-    setRoadmap(null);
-    setShowBalloons(false);
+    const prompt = `Act as an AI Ambassador. For the business idea "${userInput}", generate exactly 5 atomic roadmap steps. 
+    Return ONLY a JSON array of objects with "title" (very short, max 2 words) and "desc" (1 professional sentence). 
+    Format: [{"title": "PHASE NAME", "desc": "actionable description"}]`;
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `You are Mohammad Amin Roshan, the Ambassador. Mr. Herness has a new task (idea, app, or page). 
-        Create a 5-step roadmap using your specific Innovation Factory workflow:
-        1. Intake (Defining vision)
-        2. Atomization (Breaking into tasks for bots like Claude/Cursor)
-        3. Execution (Merging Vibe Coding results with manual refinement)
-        4. Evaluation (The Ambassador tests functionality and UX)
-        5. Delivery (Final handoff).
-        
-        The idea is: "${idea}". 
-        Make it technical, strategic, and highlight the use of premium AI tools.`,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                step: { type: Type.STRING },
-                title: { type: Type.STRING },
-                description: { type: Type.STRING }
-              },
-              required: ['step', 'title', 'description']
-            }
-          }
-        }
-      });
-
-      const data = JSON.parse(response.text);
-      setRoadmap(data);
-      setShowBalloons(true);
-      setTimeout(() => setShowBalloons(false), 3000);
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      // تمیز کردن خروجی برای تبدیل به JSON
+      const cleanedText = text.replace(/```json|```/g, "");
+      return JSON.parse(cleanedText);
     } catch (error) {
-      console.error('Error generating roadmap:', error);
-      // Fallback
-      setRoadmap([
-        { step: 'Intake', title: 'Task Reception', description: 'Receiving the task/webpage and mapping client expectations.' },
-        { step: 'Atomization', title: 'Bot Deployment', description: 'Decomposing the task for premium agents (Claude/Claw/Cursor).' },
-        { step: 'Execution', title: 'Hybrid Construction', description: 'Merging vibecoding results with manual architectural coding.' },
-        { step: 'Evaluation', title: 'Ambassador Quality Audit', description: 'Personal evaluation of functionality and user flow.' },
-        { step: 'Delivery', title: 'Product Launch', description: 'Final handoff of the functional results to the client.' },
-      ]);
-    } finally {
-      setLoading(false);
+      console.error("Gemini API Error:", error);
+      return null;
     }
-  }, [idea]);
+  };
+
+  const handleStart = async () => {
+    if (!task) return alert("Please enter an idea first!");
+    
+    setIsProcessing(true);
+    setActiveStep(0);
+    setGeneratedRoadmap([]);
+
+    const roadmap = await callGeminiAPI(task);
+    
+    if (roadmap && roadmap.length === 5) {
+      setGeneratedRoadmap(roadmap);
+      // انیمیشن پله‌پله روشن شدن باکس‌ها
+      for (let i = 1; i <= 5; i++) {
+        await new Promise(r => setTimeout(r, 800));
+        setActiveStep(i);
+      }
+    } else {
+      alert("Something went wrong with the AI. Check your API Key!");
+    }
+    setIsProcessing(false);
+  };
 
   return (
-    <div className="w-full relative">
-      <div className="flex flex-col items-center mb-10">
-        <h2 className="text-3xl font-bold text-white mb-2">Live Innovation Pipeline</h2>
-        <p className="text-slate-400 text-center max-w-2xl">
-          Enter any task, idea, or reference. Witness the Ambassador's multi-agent system atomize and execute.
-        </p>
+    <div className="p-6 bg-[#050a15] rounded-xl border border-blue-900/30">
+      <h3 className="text-blue-400 text-xs mb-4 uppercase font-bold tracking-widest">
+        Live Agent Orchestration Pipeline
+      </h3>
+      
+      <textarea
+        className="w-full h-24 p-4 bg-[#0a1224] text-white rounded-lg border border-blue-900/50 focus:border-blue-500 outline-none transition-all placeholder:text-gray-700"
+        placeholder="e.g. Forex Automated Trading, SEO Content Engine, etc."
+        value={task}
+        onChange={(e) => setTask(e.target.value)}
+      />
+
+      <div className="flex justify-end mt-4">
+        <button
+          onClick={handleStart}
+          disabled={isProcessing}
+          className={`px-8 py-3 rounded-xl font-bold transition-all ${
+            isProcessing 
+            ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
+            : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] text-white'
+          }`}
+        >
+          {isProcessing ? 'Connecting to Ambassador Brain...' : 'Initiate Operational Pipeline'}
+        </button>
       </div>
 
-      <div className="max-w-5xl mx-auto space-y-8">
-        <div className="p-1 rounded-2xl bg-gradient-to-r from-brand-500/30 via-cyan-500/30 to-brand-500/30 shadow-2xl">
-          <div className="bg-slate-950 rounded-xl p-6">
-            <label className="block text-sm font-medium text-slate-400 mb-2 uppercase tracking-wider">
-              Submit Task / Idea to the Ambassador
-            </label>
-            <textarea
-              value={idea}
-              onChange={(e) => setIdea(e.target.value)}
-              placeholder="e.g. Build a high-performance landing page for a Forex brand that includes a live calculator..."
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all outline-none h-32 resize-none text-lg"
-            />
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={generateRoadmap}
-                disabled={loading || !idea.trim()}
-                className={`
-                  px-8 py-3 rounded-xl font-bold transition-all transform active:scale-95 flex items-center gap-2
-                  ${loading || !idea.trim() 
-                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
-                    : 'bg-brand-500 text-white hover:bg-brand-400 hover:-translate-y-1 shadow-lg shadow-brand-500/30'
-                  }
-                `}
-              >
-                {loading ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Atomizing Task...
-                  </>
-                ) : 'Initiate Operational Pipeline'}
-              </button>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-8">
+        {(generatedRoadmap.length > 0 ? generatedRoadmap : [1,2,3,4,5]).map((step, index) => (
+          <div
+            key={index}
+            className={`p-4 rounded-xl border transition-all duration-700 ${
+              index + 1 <= activeStep 
+              ? 'bg-blue-900/20 border-blue-400 shadow-[0_0_15px_rgba(96,165,250,0.1)]' 
+              : 'bg-[#0a1224] border-gray-800 opacity-40'
+            }`}
+          >
+            <div className="flex justify-between items-start mb-2">
+              <span className="text-[10px] text-blue-400 font-mono font-bold">
+                {typeof step === 'object' ? step.title : 'PHASE'}
+              </span>
+              <span className={`text-2xl font-black italic ${index + 1 <= activeStep ? 'text-blue-400' : 'text-gray-900'}`}>
+                {index + 1}
+              </span>
             </div>
+            <p className="text-gray-400 text-[10px] leading-tight min-h-[40px]">
+              {typeof step === 'object' ? step.desc : 'Waiting for input...'}
+            </p>
           </div>
-        </div>
-
-        {roadmap && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 animate-in fade-in zoom-in duration-700">
-            {roadmap.map((item, idx) => (
-              <div 
-                key={idx} 
-                className={`p-6 rounded-2xl glass-card border-slate-700/50 relative overflow-hidden group hover:border-brand-500/30 transition-all ${idx === 3 ? 'bg-brand-500/5' : ''}`}
-              >
-                {idx === 3 && <div className="absolute top-0 left-0 w-full h-1 bg-brand-500 animate-pulse"></div>}
-                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <span className="text-4xl font-black italic">{idx + 1}</span>
-                </div>
-                <div className="text-brand-400 font-mono text-xs mb-2 uppercase tracking-widest">{item.step}</div>
-                <h4 className="text-white font-bold mb-3 text-sm">{item.title}</h4>
-                <p className="text-slate-400 text-xs leading-relaxed">{item.description}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {showBalloons && (
-          <div className="fixed inset-0 pointer-events-none z-[100] flex justify-center items-center">
-             <div className="text-brand-400 text-9xl animate-bounce">🚀</div>
-             <div className="text-cyan-400 text-7xl animate-bounce delay-100">✨</div>
-             <div className="text-white text-8xl animate-bounce delay-200">💎</div>
-          </div>
-        )}
+        ))}
       </div>
     </div>
   );
