@@ -1,107 +1,58 @@
 import React, { useState } from 'react';
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-// 🔴 کلید جدیدی که ساختی را دقیقاً بین دو کوتیشن پایین قرار بده
-const API_KEY = "AIzaSyDU_1U8wp_JpS8Jii7aEzV3y7MXnR1cAtQ"; 
-const genAI = new GoogleGenerativeAI(API_KEY);
 
 const StrategyTool = () => {
   const [task, setTask] = useState('');
   const [activeStep, setActiveStep] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [generatedRoadmap, setGeneratedRoadmap] = useState<any[]>([]);
+  const [roadmap, setRoadmap] = useState<any[]>([]);
 
-  const callGeminiAPI = async (userInput: string) => {
-    // استفاده از مدل فلش برای سرعت بالاتر در دمو
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    
-    const prompt = `Act as an AI Ambassador. For the business idea "${userInput}", generate exactly 5 atomic roadmap steps. 
-    Return ONLY a JSON array of objects with "title" (very short, max 2 words) and "desc" (1 professional sentence). 
-    Format: [{"title": "PHASE NAME", "desc": "actionable description"}]`;
-
-    try {
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      // تمیز کردن خروجی برای تبدیل به JSON
-      const cleanedText = text.replace(/```json|```/g, "");
-      return JSON.parse(cleanedText);
-    } catch (error) {
-      console.error("Gemini API Error:", error);
-      return null;
-    }
+  // این تابع مثل یک هوش مصنوعی کوچک عمل می‌کند
+  const simulateAI = (input: string) => {
+    const text = input.toUpperCase();
+    return [
+      { title: `ANALYZING ${text}`, desc: `Orchestrating agents to map out the best strategy for ${input}.` },
+      { title: "ATOMIC BREAKDOWN", desc: `Decomposing ${input} into high-performance sub-tasks.` },
+      { title: "SANDBOX BUILD", desc: "Executing the primary code structure in the Mac Mini environment." },
+      { title: "VIBE CHECK", desc: "The Ambassador (Amin) is auditing the output for premium quality." },
+      { title: "SYSTEM READY", desc: `The ${input} infrastructure is now fully functional and deployed.` }
+    ];
   };
 
-  const handleStart = async () => {
-    if (!task) return alert("Please enter an idea first!");
-    
+  const handleStart = () => {
+    if (!task) return alert("Please enter an idea!");
     setIsProcessing(true);
     setActiveStep(0);
-    setGeneratedRoadmap([]);
+    setRoadmap(simulateAI(task));
 
-    const roadmap = await callGeminiAPI(task);
-    
-    if (roadmap && roadmap.length === 5) {
-      setGeneratedRoadmap(roadmap);
-      // انیمیشن پله‌پله روشن شدن باکس‌ها
-      for (let i = 1; i <= 5; i++) {
-        await new Promise(r => setTimeout(r, 800));
-        setActiveStep(i);
+    let current = 0;
+    const interval = setInterval(() => {
+      current++;
+      setActiveStep(current);
+      if (current >= 5) {
+        clearInterval(interval);
+        setIsProcessing(false);
       }
-    } else {
-      alert("Something went wrong with the AI. Check your API Key!");
-    }
-    setIsProcessing(false);
+    }, 900);
   };
 
   return (
-    <div className="p-6 bg-[#050a15] rounded-xl border border-blue-900/30">
-      <h3 className="text-blue-400 text-xs mb-4 uppercase font-bold tracking-widest">
-        Live Agent Orchestration Pipeline
-      </h3>
-      
+    <div className="p-6 bg-[#050a15] rounded-xl border border-blue-900/30 shadow-2xl">
+      <h3 className="text-cyan-400 text-[10px] mb-4 uppercase font-black tracking-widest">Live Ambassador Orchestration</h3>
       <textarea
-        className="w-full h-24 p-4 bg-[#0a1224] text-white rounded-lg border border-blue-900/50 focus:border-blue-500 outline-none transition-all placeholder:text-gray-700"
-        placeholder="e.g. Forex Automated Trading, SEO Content Engine, etc."
+        className="w-full h-24 p-4 bg-[#0a1224] text-white rounded-lg border border-blue-900/50 outline-none focus:border-cyan-400"
+        placeholder="Enter your vision..."
         value={task}
         onChange={(e) => setTask(e.target.value)}
       />
+      <button onClick={handleStart} disabled={isProcessing} className="mt-4 w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-lg font-bold">
+        {isProcessing ? 'Generating Atomic Roadmap...' : 'Initiate Operational Pipeline'}
+      </button>
 
-      <div className="flex justify-end mt-4">
-        <button
-          onClick={handleStart}
-          disabled={isProcessing}
-          className={`px-8 py-3 rounded-xl font-bold transition-all ${
-            isProcessing 
-            ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
-            : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] text-white'
-          }`}
-        >
-          {isProcessing ? 'Connecting to Ambassador Brain...' : 'Initiate Operational Pipeline'}
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-8">
-        {(generatedRoadmap.length > 0 ? generatedRoadmap : [1,2,3,4,5]).map((step, index) => (
-          <div
-            key={index}
-            className={`p-4 rounded-xl border transition-all duration-700 ${
-              index + 1 <= activeStep 
-              ? 'bg-blue-900/20 border-blue-400 shadow-[0_0_15px_rgba(96,165,250,0.1)]' 
-              : 'bg-[#0a1224] border-gray-800 opacity-40'
-            }`}
-          >
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-[10px] text-blue-400 font-mono font-bold">
-                {typeof step === 'object' ? step.title : 'PHASE'}
-              </span>
-              <span className={`text-2xl font-black italic ${index + 1 <= activeStep ? 'text-blue-400' : 'text-gray-900'}`}>
-                {index + 1}
-              </span>
-            </div>
-            <p className="text-gray-400 text-[10px] leading-tight min-h-[40px]">
-              {typeof step === 'object' ? step.desc : 'Waiting for input...'}
-            </p>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-8">
+        {(roadmap.length > 0 ? roadmap : [1,2,3,4,5]).map((step, index) => (
+          <div key={index} className={`p-3 rounded-lg border transition-all duration-700 ${index + 1 <= activeStep ? 'border-cyan-400 bg-cyan-900/20 shadow-[0_0_10px_rgba(6,182,212,0.2)]' : 'border-gray-800 opacity-20'}`}>
+            <div className="text-cyan-400 font-bold text-[9px] mb-1">{typeof step === 'object' ? step.title : 'PHASE'}</div>
+            <p className="text-gray-300 text-[10px] leading-tight">{typeof step === 'object' ? step.desc : 'Waiting...'}</p>
           </div>
         ))}
       </div>
