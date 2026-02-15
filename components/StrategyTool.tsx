@@ -13,7 +13,7 @@ const StrategyTool = () => {
 
   const callGeminiAPI = async (userInput: string) => {
     // استفاده از مدل فلش برای سرعت بالاتر در دمو
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     
     const prompt = `Act as an AI Ambassador. For the business idea "${userInput}", generate exactly 5 atomic roadmap steps. 
     Return ONLY a JSON array of objects with "title" (very short, max 2 words) and "desc" (1 professional sentence). 
